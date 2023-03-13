@@ -1,36 +1,61 @@
+###################### Filebeat Configuration  #########################
+
+# ============================== Filebeat inputs ===============================
+
 filebeat.inputs:
+
+# filestream is an input for collecting log messages from files.
 - type: log
   enabled: true
-  paths:
-    - ./elasticsearch/logs/*.log
 
-json.keys_under_root: true
-json.add_error_key: true
-json.message_key: log
+  # Paths that should be crawled and fetched. Glob based paths.
+  paths:
+    - /var/log/*.log
+  fields:
+    parser: 'kafka-logs'
+
+
+# ============================== Filebeat modules ==============================
 
 filebeat.config.modules:
+  # Glob pattern for configuration loading
   path: ${path.config}/modules.d/*.yml
+
+  # Set to true to enable config reloading
   reload.enabled: false
 
-filebeat.autodiscover:
-  providers:
-    - type: docker
-      hints.enabled: true
+# ======================= Elasticsearch template setting =======================
 
+setup.template.settings:
+  index.number_of_shards: 1
+  #index.codec: best_compression
+  #_source.enabled: false
+
+# =================================== Kibana ===================================
+setup.kibana:
+# ================================== Outputs ===================================
+
+# Configure what output to use when sending the data collected by the beat.
+
+# ---------------------------- Kafka Output ----------------------------
+output.kafka:
+  # initial brokers for reading cluster metadata
+  hosts: ["localhost:9092"]
+
+  # message topic selection + partitioning
+  topic: 'iuvitylogs'
+  partition.round_robin:
+    reachable_only: false
+
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+
+
+# ================================= Processors =================================
 processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
   - add_cloud_metadata: ~
   - add_docker_metadata: ~
-  - decode_json_fields:
-      fields: ["message"]
-
-setup.ilm.enabled: false
-setup.template.enabled: false
-
-output.kafka: 
-  hosts: ["kafka:9092"] 
-  topic: 'log' 
-  partition.round_robin: 
-    reachable_only: false 
-  required_acks: 1 
-  compression: gzip 
-  max_message_bytes: 1000000
+  - add_kubernetes_metadata: ~

@@ -1,9 +1,0 @@
-server:
-  name: kibana
-  host: 0.0.0.0
-  maxPayload: 104857600
-
-elasticsearch:
-  hosts: ["http://docker-es:9200"]
-
-monitoring.ui.container.elasticsearch.enabled: true
